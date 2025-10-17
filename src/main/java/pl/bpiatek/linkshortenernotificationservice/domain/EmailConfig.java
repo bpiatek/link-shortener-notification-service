@@ -9,7 +9,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 class EmailConfig {
 
     @Bean
-    EmailSender emailSender(@Value("${spring.mail.username}") String fromEmail, JavaMailSender mailSender) {
+    EmailSender emailSender(@Value("${app.mail.from}") String fromEmail, JavaMailSender mailSender) {
         return new SmtpEmailSender(mailSender, fromEmail);
     }
 
