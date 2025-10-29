@@ -31,7 +31,7 @@
         <spring-boot-admin.version>3.5.2</spring-boot-admin.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <logstash-logback-encoder.version>8.1</logstash-logback-encoder.version>
-        <link-shortener-contracts.version>0.0.6</link-shortener-contracts.version>
+        <link-shortener-contracts.version>0.0.9</link-shortener-contracts.version>
         <confluent.version>8.0.0</confluent.version>
         <greenmail-junit5.version>2.1.7</greenmail-junit5.version>
     </properties>
@@ -76,6 +76,10 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
             <groupId>de.codecentric</groupId>
             <artifactId>spring-boot-admin-starter-client</artifactId>
             <version>${spring-boot-admin.version}</version>
@@ -87,30 +91,30 @@
         </dependency>
 
         <!--        KAFKA       -->
-<!--        <dependency>-->
-<!--            <groupId>pl.bpiatek</groupId>-->
-<!--            <artifactId>link-shortener-contracts</artifactId>-->
-<!--            <version> ${link-shortener-contracts.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.kafka</groupId>-->
-<!--            <artifactId>spring-kafka</artifactId>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>io.confluent</groupId>-->
-<!--            <artifactId>kafka-protobuf-serializer</artifactId>-->
-<!--            <version>${confluent.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>io.confluent</groupId>-->
-<!--            <artifactId>kafka-schema-registry-client</artifactId>-->
-<!--            <version>${confluent.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>io.confluent</groupId>-->
-<!--            <artifactId>kafka-schema-serializer</artifactId>-->
-<!--            <version>${confluent.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>pl.bpiatek</groupId>
+            <artifactId>link-shortener-contracts</artifactId>
+            <version> ${link-shortener-contracts.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-serializer</artifactId>
+            <version>${confluent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>${confluent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-serializer</artifactId>
+            <version>${confluent.version}</version>
+        </dependency>
 
         <!-- Database -->
         <dependency>
