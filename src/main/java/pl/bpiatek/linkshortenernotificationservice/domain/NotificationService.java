@@ -29,13 +29,13 @@ class NotificationService {
     }
 
     @Transactional
-    public void processUserRegistration(String eventId, UserRegistered payload) {
+    void processUserRegistration(String eventId, UserRegistered payload) {
         if (logRepository.existsByEventId(eventId)) {
             log.warn("Notification for event ID '{}' has already been processed. Skipping.", eventId);
             return;
         }
 
-        var verificationUrl = String.format("%s/api/auth/verify-email?token=%s", appBaseUrl, payload.getVerificationToken());
+        var verificationUrl = String.format("%s/auth/verify-email?token=%s", appBaseUrl, payload.getVerificationToken());
         var subject = "Welcome to Link Shortener!";
 
         var context = new Context();
@@ -53,6 +53,7 @@ class NotificationService {
 
     private void saveLog(String eventId, String email, String status, String errorMessage) {
         var logEntry = new NotificationLog(
+                null,
                 eventId,
                 email,
                 NOTIFICATION_TYPE,

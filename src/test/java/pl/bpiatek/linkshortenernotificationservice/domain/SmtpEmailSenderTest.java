@@ -8,19 +8,17 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@EnableAutoConfiguration(exclude = {
-        org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class
-})
+@SpringBootTest(classes = {EmailConfig.class, MailSenderAutoConfiguration.class})
 @ActiveProfiles("test")
 class SmtpEmailSenderTest {
 
@@ -36,6 +34,12 @@ class SmtpEmailSenderTest {
         registry.add("spring.mail.username", () -> "testuser");
         registry.add("spring.mail.password", () -> "testpass");
     }
+
+    @MockitoBean
+    NotificationService notificationService;
+
+    @MockitoBean
+    NotificationLogRepository notificationLogRepository;
 
     @Autowired
     private EmailSender emailSender;
