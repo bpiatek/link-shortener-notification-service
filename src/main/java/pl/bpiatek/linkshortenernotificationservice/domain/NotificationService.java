@@ -35,7 +35,7 @@ class NotificationService {
             return;
         }
 
-        var verificationUrl = String.format("%s/auth/verify-email?token=%s", appBaseUrl, payload.getVerificationToken());
+        var verificationUrl = String.format("%s/users/auth/verify?token=%s", appBaseUrl, payload.getVerificationToken());
         var subject = "Welcome to Link Shortener!";
 
         var context = new Context();
