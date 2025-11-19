@@ -42,9 +42,6 @@ class UserLifecycleKafkaConsumerTest implements WithFullInfrastructure {
     @Value("${topic.user.lifecycle}")
     private String topicName;
 
-    @Value("${app.base-url}")
-    private String baseUrl;
-
     @RegisterExtension
     static GreenMailExtension greenMail = new GreenMailExtension(ServerSetupTest.SMTP)
             .withConfiguration(GreenMailConfiguration.aConfig().withUser("testuser", "testpass"));
@@ -70,23 +67,23 @@ class UserLifecycleKafkaConsumerTest implements WithFullInfrastructure {
         // given
         var eventId = UUID.randomUUID().toString();
         var userEmail = "test-consumer@example.com";
-        var verificationToken = "test-token-123";
-        var event = createUserRegisteredEvent(eventId, userEmail, verificationToken);
+        var verificationUrl = "https://dev.test.pl/auth/verify?token=123";
+        var event = createUserRegisteredEvent(eventId, userEmail, verificationUrl);
 
         // when
         kafkaTemplate.send(topicName, event);
 
         // then
-        assertEmailWasSent(userEmail, verificationToken);
+        assertEmailWasSent(userEmail, verificationUrl);
         assertThat(fixtures.getByEventId(eventId)).isNotNull();
     }
 
 
-    private UserLifecycleEventProto.UserLifecycleEvent createUserRegisteredEvent(String eventId, String email, String token) {
+    private UserLifecycleEventProto.UserLifecycleEvent createUserRegisteredEvent(String eventId, String email, String url) {
         var payload = UserLifecycleEventProto.UserRegistered.newBuilder()
                 .setUserId("user-1")
                 .setEmail(email)
-                .setVerificationToken(token)
+                .setVerificationUrl(url)
                 .build();
 
         return UserLifecycleEventProto.UserLifecycleEvent.newBuilder()
@@ -95,7 +92,7 @@ class UserLifecycleKafkaConsumerTest implements WithFullInfrastructure {
                 .build();
     }
 
-    private void assertEmailWasSent(String expectedTo, String expectedToken) {
+    private void assertEmailWasSent(String expectedTo, String expectedUrl) {
         try {
             assertThat(greenMail.waitForIncomingEmail(5000, 1)).isTrue();
 
@@ -104,7 +101,6 @@ class UserLifecycleKafkaConsumerTest implements WithFullInfrastructure {
 
             var receivedMessage = receivedMessages[0];
             var body = GreenMailUtil.getBody(receivedMessage);
-            var expectedUrl = String.format("%s/auth/verify-email?token=%s", baseUrl, expectedToken);
 
             try (var softly = new AutoCloseableSoftAssertions()) {
                 softly.assertThat(receivedMessage.getRecipients(TO)[0].toString()).isEqualTo(expectedTo);

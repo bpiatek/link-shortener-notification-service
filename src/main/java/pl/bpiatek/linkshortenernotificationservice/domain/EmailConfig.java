@@ -31,8 +31,7 @@ class EmailConfig {
     NotificationService notificationService(NotificationLogRepository logRepository,
                                             EmailSender emailSender,
                                             TemplateEngine templateEngine,
-                                            Clock clock,
-                                            @Value("${app.base-url}") String appBaseUrl) {
-        return new NotificationService(logRepository, emailSender, templateEngine, clock, appBaseUrl);
+                                            Clock clock) {
+        return new NotificationService(logRepository, emailSender, templateEngine, clock);
     }
 }

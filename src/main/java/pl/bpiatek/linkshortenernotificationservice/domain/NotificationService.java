@@ -18,14 +18,12 @@ class NotificationService {
     private final EmailSender emailSender;
     private final TemplateEngine templateEngine;
     private final Clock clock;
-    private final String appBaseUrl;
 
-    NotificationService(NotificationLogRepository logRepository, EmailSender emailSender, TemplateEngine templateEngine, Clock clock, String appBaseUrl) {
+    NotificationService(NotificationLogRepository logRepository, EmailSender emailSender, TemplateEngine templateEngine, Clock clock) {
         this.logRepository = logRepository;
         this.emailSender = emailSender;
         this.templateEngine = templateEngine;
         this.clock = clock;
-        this.appBaseUrl = appBaseUrl;
     }
 
     @Transactional
@@ -35,11 +33,10 @@ class NotificationService {
             return;
         }
 
-        var verificationUrl = String.format("%s/users/auth/verify?token=%s", appBaseUrl, payload.getVerificationToken());
         var subject = "Welcome to Link Shortener!";
 
         var context = new Context();
-        context.setVariable("verificationUrl", verificationUrl);
+        context.setVariable("verificationUrl", payload.getVerificationUrl());
         var htmlBody = templateEngine.process("welcome-email", context);
 
         try {
