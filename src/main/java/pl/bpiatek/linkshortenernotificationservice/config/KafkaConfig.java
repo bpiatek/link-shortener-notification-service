@@ -4,6 +4,7 @@ import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer;
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,14 +37,18 @@ class KafkaConfig {
     }
 
     @Bean
-    ConcurrentKafkaListenerContainerFactory<String, UserLifecycleEvent> userLifecycleEventContainerFactory() {
+    ConcurrentKafkaListenerContainerFactory<String, UserLifecycleEvent> userLifecycleEventContainerFactory(
+            ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
+            ConsumerFactory<String, UserLifecycleEvent> userLifecycleEventConsumerFactory) {
+
         ConcurrentKafkaListenerContainerFactory<String, UserLifecycleEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(userLifecycleEventConsumerFactory());
-        factory.getContainerProperties()
-                .setListenerTaskExecutor(new ConcurrentTaskExecutor(
-                        Executors.newThreadPerTaskExecutor(Thread.ofVirtual().factory())
-                ));
+
+        configurer.configure(
+                (ConcurrentKafkaListenerContainerFactory) factory,
+                (ConsumerFactory) userLifecycleEventConsumerFactory
+        );
+
         return factory;
     }
 
