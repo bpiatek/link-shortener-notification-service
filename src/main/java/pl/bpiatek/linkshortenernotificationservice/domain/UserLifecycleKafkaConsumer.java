@@ -3,7 +3,10 @@ package pl.bpiatek.linkshortenernotificationservice.domain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Headers;
 import pl.bpiatek.contracts.user.UserLifecycleEventProto;
+
+import java.util.Map;
 
 class UserLifecycleKafkaConsumer {
 
@@ -19,7 +22,9 @@ class UserLifecycleKafkaConsumer {
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "userLifecycleEventContainerFactory"
     )
-    void consume(UserLifecycleEventProto.UserLifecycleEvent event) {
+    void consume(UserLifecycleEventProto.UserLifecycleEvent event,
+                 @Headers Map<String, Object> headers) {
+        log.info("Received headers: {}", headers);
         log.info("Received user lifecycle event: {}", event);
 
         switch (event.getEventPayloadCase()) {
