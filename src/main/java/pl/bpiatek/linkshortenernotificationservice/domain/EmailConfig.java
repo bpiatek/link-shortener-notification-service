@@ -28,10 +28,15 @@ class EmailConfig {
     }
 
     @Bean
-    NotificationService notificationService(NotificationLogRepository logRepository,
+    NotificationService notificationService(
                                             EmailSender emailSender,
                                             TemplateEngine templateEngine,
-                                            Clock clock) {
-        return new NotificationService(logRepository, emailSender, templateEngine, clock);
+                                            NotificationLogService notificationLogService) {
+        return new NotificationService(emailSender, templateEngine, notificationLogService);
+    }
+
+    @Bean
+    NotificationLogService notificationLogService(NotificationLogRepository notificationLogRepository, Clock clock) {
+        return new NotificationLogService(notificationLogRepository, clock);
     }
 }

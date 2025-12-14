@@ -24,14 +24,17 @@ class UserLifecycleKafkaConsumer {
     )
     void consume(UserLifecycleEventProto.UserLifecycleEvent event,
                  @Headers Map<String, Object> headers) {
-        log.info("Received headers: {}", headers);
         log.info("Received user lifecycle event: {}", event);
 
         switch (event.getEventPayloadCase()) {
             case USER_REGISTERED:
                 notificationService.processUserRegistration(event.getEventId(), event.getUserRegistered());
                 break;
-                //TODO more in the future
+            case PASSWORD_RESET_REQUESTED:
+                notificationService.processPasswordResetRequest(event.getEventId(), event.getPasswordResetRequested());
+                break;
+            case USER_PASSWORD_CHANGED:
+                break;
             default:
                 log.warn("Received unhandled event type: {}", event.getEventPayloadCase());
         }

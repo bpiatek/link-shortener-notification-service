@@ -9,6 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.Timestamp;
 
+@Component
 @ActiveProfiles("test")
 public class NotificationLogFixtures {
 

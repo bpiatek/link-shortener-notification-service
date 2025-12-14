@@ -1,36 +1,21 @@
 package pl.bpiatek.linkshortenernotificationservice.domain;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
+import pl.bpiatek.linkshortenernotificationservice.IntegrationTest;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
-@JdbcTest
-@Import({JdbcNotificationLogRepository.class, NotificationLogFixtures.class})
-@ActiveProfiles("test")
-class JdbcNotificationLogRepositoryTest implements WithPostgres{
-
-    @Autowired
-    JdbcTemplate jdbcTemplate;
+class JdbcNotificationLogRepositoryTest extends IntegrationTest {
 
     @Autowired
     JdbcNotificationLogRepository notificationLogRepository;
 
     @Autowired
     NotificationLogFixtures notificationLogFixtures;
-
-    @AfterEach
-    void cleanUp() {
-        jdbcTemplate.update("DELETE FROM notification_logs");
-    }
 
     @Test
     void shouldSaveNotificationLog() {
@@ -64,26 +49,52 @@ class JdbcNotificationLogRepositoryTest implements WithPostgres{
     }
 
     @Test
-    void shouldConfirmThatNotificationWithGivenEventIdAlreadyExist() {
+    void shouldUpdateNotificationLog() {
         // given
-        var notificationLog = notificationLogFixtures.aNotificationLog();
+        var log = notificationLogFixtures.aNotificationLog();
+        var updatedLog = new NotificationLog(
+                null, log.getEventId(),
+                null,
+                null,
+                "ERROR",
+                null,
+                "not send");
 
         // when
-        var exist = notificationLogRepository.existsByEventId(notificationLog.getEventId());
+        notificationLogRepository.update(updatedLog);
 
         // then
-        assertThat(exist).isTrue();
+        var savedLog = notificationLogFixtures.getByEventId(log.getEventId());
+        assertThat(savedLog).isNotNull();
+        assertSoftly(s -> {
+            s.assertThat(savedLog.getEventId()).isEqualTo(log.getEventId());
+            s.assertThat(savedLog.getRecipientEmail()).isEqualTo(log.getRecipientEmail());
+            s.assertThat(savedLog.getNotificationType()).isEqualTo(log.getNotificationType());
+            s.assertThat(savedLog.getStatus()).isEqualTo(updatedLog.status());
+            s.assertThat(savedLog.getSentAt()).isEqualTo(log.getSentAt());
+            s.assertThat(savedLog.getErrorMessage()).isEqualTo(updatedLog.errorMessage());
+        });
     }
 
     @Test
-    void shouldConfirmThatNotificationWithGivenEventIdDoesNotExist() {
+    void shouldFindNotificationLogById() {
         // given
-        var eventId = "non-existent-event-id";
+        var log = notificationLogFixtures.aNotificationLog();
 
         // when
-        var exist = notificationLogRepository.existsByEventId(eventId);
+        var foundLog = notificationLogRepository.findByEventId(log.getEventId());
 
         // then
-        assertThat(exist).isFalse();
+        assertThat(foundLog).isPresent();
+        var actual = foundLog.get();
+        assertSoftly(s -> {
+            s.assertThat(actual.id()).isEqualTo(log.getId());
+            s.assertThat(actual.eventId()).isEqualTo(log.getEventId());
+            s.assertThat(actual.recipientEmail()).isEqualTo(log.getRecipientEmail());
+            s.assertThat(actual.notificationType()).isEqualTo(log.getNotificationType());
+            s.assertThat(actual.status()).isEqualTo(log.getStatus());
+            s.assertThat(actual.sentAt()).isEqualTo(log.getSentAt());
+            s.assertThat(actual.errorMessage()).isEqualTo(log.getErrorMessage());
+        });
     }
 }

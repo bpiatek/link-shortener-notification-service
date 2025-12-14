@@ -41,13 +41,15 @@ class KafkaConfig {
             ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
             ConsumerFactory<String, UserLifecycleEvent> userLifecycleEventConsumerFactory) {
 
-        ConcurrentKafkaListenerContainerFactory<String, UserLifecycleEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, UserLifecycleEvent>();
 
-        configurer.configure(
-                (ConcurrentKafkaListenerContainerFactory) factory,
-                (ConsumerFactory) userLifecycleEventConsumerFactory
-        );
+        @SuppressWarnings("unchecked")
+        var rawFactory = (ConcurrentKafkaListenerContainerFactory<Object, Object>) (Object) factory;
+
+        @SuppressWarnings("unchecked")
+        var rawConsumerFactory = (ConsumerFactory<Object, Object>) (Object) userLifecycleEventConsumerFactory;
+
+        configurer.configure(rawFactory, rawConsumerFactory);
 
         return factory;
     }

@@ -2,62 +2,112 @@ package pl.bpiatek.linkshortenernotificationservice.domain;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import pl.bpiatek.contracts.user.UserLifecycleEventProto.PasswordResetRequested;
 import pl.bpiatek.contracts.user.UserLifecycleEventProto.UserRegistered;
 
-import java.time.Clock;
+import java.util.Map;
 
 class NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
-    private static final String NOTIFICATION_TYPE = "WELCOME_EMAIL";
 
-    private final NotificationLogRepository logRepository;
+    private static final String TYPE_WELCOME_EMAIL = "WELCOME_EMAIL";
+    private static final String TYPE_PASSWORD_RESET = "PASSWORD_RESET_EMAIL";
+
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_SENT = "SENT";
+    private static final String STATUS_FAILED = "FAILED";
+
     private final EmailSender emailSender;
     private final TemplateEngine templateEngine;
-    private final Clock clock;
+    private final NotificationLogService notificationLogService;
 
-    NotificationService(NotificationLogRepository logRepository, EmailSender emailSender, TemplateEngine templateEngine, Clock clock) {
-        this.logRepository = logRepository;
+    public NotificationService(EmailSender emailSender, TemplateEngine templateEngine, NotificationLogService notificationLogService) {
         this.emailSender = emailSender;
         this.templateEngine = templateEngine;
-        this.clock = clock;
+        this.notificationLogService = notificationLogService;
     }
 
-    @Transactional
     void processUserRegistration(String eventId, UserRegistered payload) {
-        if (logRepository.existsByEventId(eventId)) {
-            log.warn("Notification for event ID '{}' has already been processed. Skipping.", eventId);
+        var variables = Map.of("verificationUrl", (Object) payload.getVerificationUrl());
+
+        var request = new EmailRequest(
+                eventId,
+                payload.getEmail(),
+                TYPE_WELCOME_EMAIL,
+                "Welcome to Link Shortener!",
+                "welcome-email",
+                variables
+        );
+
+        processNotification(request);
+    }
+
+    void processPasswordResetRequest(String eventId, PasswordResetRequested payload) {
+        var variables = Map.of(
+                "email", payload.getEmail(),
+                "resetUrl", (Object) payload.getResetUrl()
+        );
+
+        var request = new EmailRequest(
+                eventId,
+                payload.getEmail(),
+                TYPE_PASSWORD_RESET,
+                "Reset Your Password - Link Shortener",
+                "password-reset-email",
+                variables
+        );
+
+        processNotification(request);
+    }
+
+
+    private void processNotification(EmailRequest req) {
+        if (notificationLogService.existsByEventId(req.eventId())) {
+            log.warn("Notification for event ID '{}' has already been processed. Skipping.", req.eventId());
             return;
         }
 
-        var subject = "Welcome to Link Shortener!";
+        if (!trySavePendingLog(req)) {
+            return;
+        }
 
         var context = new Context();
-        context.setVariable("verificationUrl", payload.getVerificationUrl());
-        var htmlBody = templateEngine.process("welcome-email", context);
+        context.setVariables(req.variables());
+        var htmlBody = templateEngine.process(req.templateName(), context);
 
+
+        sendEmailAndUpdateStatus(req, htmlBody);
+    }
+
+    private boolean trySavePendingLog(EmailRequest req) {
         try {
-            emailSender.send(payload.getEmail(), subject, htmlBody);
-            saveLog(eventId, payload.getEmail(), "SENT", null);
+            notificationLogService.saveLog(req.eventId(), req.recipient(), req.type(), STATUS_PENDING, null);
+            return true;
         } catch (Exception e) {
-            log.error("Failed to send welcome email for event ID '{}'. Reason: {}", eventId, e.getMessage());
-            saveLog(eventId, payload.getEmail(), "FAILED", e.getMessage());
+            log.warn("Could not save PENDING log for event '{}'. Assuming duplicate or concurrent processing.", req.eventId());
+            return false;
         }
     }
 
-    private void saveLog(String eventId, String email, String status, String errorMessage) {
-        var logEntry = new NotificationLog(
-                null,
-                eventId,
-                email,
-                NOTIFICATION_TYPE,
-                status,
-                clock.instant(),
-                errorMessage
-        );
-        logRepository.save(logEntry);
+    private void sendEmailAndUpdateStatus(EmailRequest req, String htmlBody) {
+        try {
+            emailSender.send(req.recipient(), req.subject(), htmlBody);
+            notificationLogService.updateLogStatus(req.eventId(), STATUS_SENT, null);
+        } catch (Exception e) {
+            log.error("Failed to send email for event ID '{}'. Reason: {}", req.eventId(), e.getMessage());
+            notificationLogService.updateLogStatus(req.eventId(), STATUS_FAILED, e.getMessage());
+        }
     }
+
+    private record EmailRequest(
+            String eventId,
+            String recipient,
+            String type,
+            String subject,
+            String templateName,
+            Map<String, Object> variables
+    ) {}
 }

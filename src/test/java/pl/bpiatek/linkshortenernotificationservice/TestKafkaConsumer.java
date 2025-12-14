@@ -1,4 +1,4 @@
-package pl.bpiatek.linkshortenernotificationservice.domain;
+package pl.bpiatek.linkshortenernotificationservice;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 @ActiveProfiles("test")
-class TestKafkaConsumer<T> {
+public class TestKafkaConsumer<T> {
 
     private static final Logger log = LoggerFactory.getLogger(TestKafkaConsumer.class);
 
