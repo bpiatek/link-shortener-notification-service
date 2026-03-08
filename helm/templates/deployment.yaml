@@ -38,6 +38,12 @@ spec:
             {{- end }}
           ports:
             - containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            failureThreshold: 12
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
