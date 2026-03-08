@@ -2,8 +2,7 @@
 # STAGE 1: Builder
 # This stage builds the application, using a persistent cache for dependencies.
 # ===================================================================================
-FROM eclipse-temurin:21-jdk-jammy AS builder
-
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
 # Explicitly create the .m2 directory so that Docker's mount command
@@ -33,17 +32,30 @@ RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
     --mount=type=cache,target=/root/.m2 \
     ./mvnw package -DskipTests --global-settings /root/.m2/settings.xml
 
+# NEW: Extract the layered JAR built by the spring-boot-maven-plugin
+RUN java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
+
 
 # ===================================================================================
 # STAGE 2: Final Image
 # This stage creates the final, minimal image for production.
 # ===================================================================================
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Copy only the final application JAR from the builder stage.
-COPY --from=builder /app/target/*.jar app.jar
+# Create a non-root user and group for strict security
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 
-# Set the entrypoint to run the application.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Copy the extracted layers in order of change frequency.
+# Dependencies change rarely, so they are cached at the bottom.
+COPY --from=builder /app/target/extracted/dependencies/ ./
+COPY --from=builder /app/target/extracted/spring-boot-loader/ ./
+COPY --from=builder /app/target/extracted/snapshot-dependencies/ ./
+
+# Your application code changes frequently, so it goes last.
+COPY --from=builder /app/target/extracted/application/ ./
+
+# Use the specialized JarLauncher instead of the fat JAR
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
