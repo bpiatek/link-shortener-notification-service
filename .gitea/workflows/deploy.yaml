@@ -96,5 +96,7 @@ jobs:
             --values helm/values-$TARGET_ENV.yaml \
             --set image.repository=${{ steps.image_info.outputs.name }} \
             --set image.tag=${{ steps.image_info.outputs.tag }} \
-            --set spring.profiles.active=$TARGET_ENV
+            --set spring.profiles.active=$TARGET_ENV \
+            --atomic \
+            --timeout 3m
           echo "Helm deployment finished."
