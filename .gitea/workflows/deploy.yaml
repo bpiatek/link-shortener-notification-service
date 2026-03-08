@@ -16,7 +16,7 @@ on:
       - main
 jobs:
   build-and-deploy:
-    name: Build and Deploy to ${{ github.event.inputs.environment }}
+    name: Build and Deploy to ${{ github.event.inputs.environment || 'dev' }}
     runs-on: java21-build
     env:
       DOCKER_BUILDKIT: 1
@@ -43,13 +43,22 @@ jobs:
             </settings>" > "$SETTINGS_FILE"
           echo "Maven settings.xml for Docker created."
 
-      - name: Run Maven Tests
+      - name: Run Maven Build and Tests
         run: |
           echo "Running unit tests..."
-          # We use the settings.xml created above. 
-          # If tests fail, 'mvn' returns exit code 1, and the pipeline STOPS here.
           mvn -s settings.xml clean verify
           echo "Tests passed successfully."
+
+      - name: Extract Spring Boot Layers
+        run: |
+          # Extract the layers natively on the runner to prepare for Docker
+          java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
+
+      - name: Clean up Maven settings.xml
+        if: always()
+        run: |
+          rm settings.xml
+          echo "Cleaned up temporary settings.xml"
 
       - name: Get Image Tag and Name
         id: image_info
@@ -59,16 +68,9 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build \
-            --secret id=maven-settings,src=settings.xml \
-            -t ${{ steps.image_info.outputs.name }}:${{ steps.image_info.outputs.tag }} .
+          # No secrets needed here anymore. It just copies the layers.
+          docker build -t ${{ steps.image_info.outputs.name }}:${{ steps.image_info.outputs.tag }} .
           echo "Docker image built: ${{ steps.image_info.outputs.name }}:${{ steps.image_info.outputs.tag }}"
-
-      - name: Clean up Maven settings.xml
-        if: always()
-        run: |
-          rm settings.xml
-          echo "Cleaned up temporary settings.xml"
 
       - name: Import Image into MicroK8s
         run: |
