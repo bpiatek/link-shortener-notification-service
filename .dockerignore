@@ -1,7 +1,9 @@
 settings.xml
-
-target/
-
 .idea/
 *.iml
 .env
+
+target/
+
+# explicitly allow the extracted Spring Boot layers
+!target/extracted/
