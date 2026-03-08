@@ -5,53 +5,68 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 @Component("vault")
 class VaultHealthIndicator implements HealthIndicator {
 
     private static final Logger log = LoggerFactory.getLogger(VaultHealthIndicator.class);
-
     private final RestClient restClient;
     private final String vaultHealthUrl;
 
     VaultHealthIndicator(
             RestClient.Builder restClientBuilder,
             @Value("${vault.address:http://vault.vault.svc.cluster.local:8200}") String vaultAddress) {
-        this.restClient = restClientBuilder.build();
+        var requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(2))
+                        .build()
+        );
+        requestFactory.setReadTimeout(Duration.ofSeconds(3));
+
+        this.restClient = restClientBuilder
+                .requestFactory(requestFactory)
+                .build();
+
         this.vaultHealthUrl = vaultAddress + "/v1/sys/health";
     }
 
     @Override
     public Health health() {
-        log.debug("Executing Vault health check against: {}", vaultHealthUrl);
-
         try {
             var response = restClient.get()
                     .uri(vaultHealthUrl)
                     .retrieve()
                     .toBodilessEntity();
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return Health.up()
-                        .withDetail("vault", "reachable")
-                        .withDetail("status", response.getStatusCode().value())
+            var status = response.getStatusCode().value();
+
+            return switch (status) {
+                case 200 -> Health.up()
+                        .withDetail("state", "ACTIVE")
                         .build();
-            }
+                case 503 -> Health.down()
+                        .withDetail("state", "SEALED")
+                        .withDetail("action", "Manual unseal required on vault-0")
+                        .build();
+                case 501 -> Health.down()
+                        .withDetail("state", "UNINITIALIZED")
+                        .build();
+                default -> Health.down()
+                        .withDetail("state", "UNKNOWN")
+                        .withDetail("http_status", status)
+                        .build();
+            };
 
-            log.warn("Vault health check failed with status: {}", response.getStatusCode());
-            return Health.down()
-                    .withDetail("error", "Vault responded with non-200 status")
-                    .withDetail("status", response.getStatusCode().value())
-                    .build();
-
-        } catch (RestClientException e) {
-            log.error("Critical failure: Cannot reach HashiCorp Vault", e);
-            // Passing the exception automatically prints the stack trace in the /actuator/health JSON
+        } catch (Exception e) {
+            log.error("Failed to connect to Vault at {}", vaultHealthUrl);
             return Health.down(e)
-                    .withDetail("error", "Connection refused or timed out")
+                    .withDetail("error", "Vault connection refused")
                     .build();
         }
     }
