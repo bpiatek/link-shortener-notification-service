@@ -24,14 +24,35 @@ spec:
 
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      # Architectural requirement for graceful shutdown to prevent SIGKILL too early
+      terminationGracePeriodSeconds: 40
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: JAVA_TOOL_OPTIONS
-              value: "-XX:MaxRAMPercentage=75.0"
             - name: SPRING_PROFILES_ACTIVE
               value: "{{ .Values.spring.profiles.active }}"
+            {{- if .Values.env }}
+            {{- toYaml .Values.env | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
