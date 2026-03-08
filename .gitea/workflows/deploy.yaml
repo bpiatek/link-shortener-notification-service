@@ -26,6 +26,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
       - name: Create Maven settings.xml for Docker build
         run: |
           SETTINGS_FILE="settings.xml"
