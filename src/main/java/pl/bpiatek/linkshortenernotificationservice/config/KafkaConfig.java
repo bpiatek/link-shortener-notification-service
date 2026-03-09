@@ -2,6 +2,7 @@ package pl.bpiatek.linkshortenernotificationservice.config;
 
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer;
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializerConfig;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
@@ -12,12 +13,11 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
+import org.springframework.kafka.core.KafkaAdmin;
 import pl.bpiatek.contracts.user.UserLifecycleEventProto.UserLifecycleEvent;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 @Configuration
 @EnableKafka
@@ -27,6 +27,11 @@ class KafkaConfig {
 
      KafkaConfig(KafkaProperties kafkaProperties) {
         this.kafkaProperties = kafkaProperties;
+    }
+
+    @Bean
+    AdminClient kafkaAdminClient(KafkaAdmin kafkaAdmin) {
+        return AdminClient.create(kafkaAdmin.getConfigurationProperties());
     }
 
     @Bean

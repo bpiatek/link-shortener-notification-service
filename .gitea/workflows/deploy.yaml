@@ -19,7 +19,6 @@ jobs:
     name: Build and Deploy to ${{ github.event.inputs.environment || 'dev' }}
     runs-on: java21-build
     env:
-      DOCKER_BUILDKIT: 1
       TARGET_ENV: ${{ github.event.inputs.environment || 'dev' }}
 
     steps:

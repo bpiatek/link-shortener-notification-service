@@ -6,20 +6,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
-import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PreDestroy;
 import java.util.concurrent.TimeUnit;
 
 @Component("kafka")
-public class KafkaHealthIndicator implements HealthIndicator {
+class KafkaHealthIndicator implements HealthIndicator {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaHealthIndicator.class);
     private final AdminClient adminClient;
 
-    KafkaHealthIndicator(KafkaAdmin kafkaAdmin) {
-        this.adminClient = AdminClient.create(kafkaAdmin.getConfigurationProperties());
+    KafkaHealthIndicator(AdminClient adminClient) {
+        this.adminClient = adminClient;
     }
 
     @Override
@@ -40,13 +38,6 @@ public class KafkaHealthIndicator implements HealthIndicator {
         } catch (Exception e) {
             log.warn("Kafka health check failed: {}", e.getMessage());
             return Health.down(e).withDetail("error", "Cannot connect to Kafka broker").build();
-        }
-    }
-
-    @PreDestroy
-    void close() {
-        if (adminClient != null) {
-            adminClient.close();
         }
     }
 }
