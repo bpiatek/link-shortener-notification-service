@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PreDestroy;
 import java.util.concurrent.TimeUnit;
 
-@Component("kafka")
+//@Component("kafka")
 class KafkaHealthIndicator implements HealthIndicator {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaHealthIndicator.class);
