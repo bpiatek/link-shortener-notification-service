@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -22,15 +23,24 @@ class VaultHealthIndicator implements HealthIndicator {
     VaultHealthIndicator(
             RestClient.Builder restClientBuilder,
             @Value("${vault.address:http://vault.vault.svc.cluster.local:8200}") String vaultAddress) {
-        var requestFactory = new JdkClientHttpRequestFactory(
-                HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(2))
-                        .build()
-        );
+
+        // ARCHITECTURAL FIX 1: Force HTTP/1.1
+        // Prevents the JDK SelectorManager thread from entering an infinite CPU spin loop
+        // when the HTTP/2 stream is abruptly closed by the Go server.
+        var httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(2))
+                .build();
+
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(Duration.ofSeconds(3));
 
         this.restClient = restClientBuilder
                 .requestFactory(requestFactory)
+                // ARCHITECTURAL FIX 2: Override the default error handler
+                // We tell Spring NOT to throw exceptions for 4xx/5xx errors, allowing us
+                // to gracefully handle Vault's 503 SEALED status in the switch block.
+                .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> { /* No-op */ })
                 .build();
 
         this.vaultHealthUrl = vaultAddress + "/v1/sys/health";
@@ -39,6 +49,8 @@ class VaultHealthIndicator implements HealthIndicator {
     @Override
     public Health health() {
         try {
+            // Because of the custom status handler, this will now safely return the 503
+            // response body-less entity instead of throwing an exception.
             var response = restClient.get()
                     .uri(vaultHealthUrl)
                     .retrieve()
@@ -64,6 +76,8 @@ class VaultHealthIndicator implements HealthIndicator {
             };
 
         } catch (Exception e) {
+            // This catch block will now ONLY execute for genuine network failures
+            // (e.g., Vault pod is dead / Connection Refused)
             log.error("Failed to connect to Vault at {}", vaultHealthUrl);
             return Health.down(e)
                     .withDetail("error", "Vault connection refused")
