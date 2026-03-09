@@ -13,14 +13,14 @@ import org.springframework.web.client.RestClient;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
-//@Component("vault")
-class VaultHealthIndicator implements HealthIndicator {
+@Component("vault")
+public class VaultHealthIndicator implements HealthIndicator {
 
     private static final Logger log = LoggerFactory.getLogger(VaultHealthIndicator.class);
     private final RestClient restClient;
     private final String vaultHealthUrl;
 
-    VaultHealthIndicator(
+    public VaultHealthIndicator(
             RestClient.Builder restClientBuilder,
             @Value("${vault.address:http://vault.vault.svc.cluster.local:8200}") String vaultAddress) {
 
